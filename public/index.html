@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📧 AI Email Agent Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background-color: #0b0f19;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header */
+    header {
+      background: #111827;
+      border-bottom: 1px solid #1f2937;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-icon {
+      font-size: 26px;
+      background: #1e293b;
+      padding: 8px;
+      border-radius: 12px;
+      border: 1px solid #334155;
+    }
+    .brand-title h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+    .brand-title p {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #064e3b;
+      color: #34d399;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px solid #059669;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      background: #34d399;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.9); }
+    }
+
+    /* Main Container */
+    .app-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Left: Email List */
+    .sidebar {
+      width: 380px;
+      background: #0f172a;
+      border-right: 1px solid #1e293b;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .sidebar-header h2 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+    }
+    .email-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+    .email-item {
+      padding: 16px;
+      border-bottom: 1px solid #1e293b;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .email-item:hover {
+      background: #1e293b;
+    }
+    .email-item.active {
+      background: #1e293b;
+      border-left: 4px solid #6366f1;
+    }
+    .email-item-from {
+      font-size: 14px;
+      font-weight: 600;
+      color: #f1f5f9;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .item-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+    .badge-drafted {
+      background: #312e81;
+      color: #a5b4fc;
+    }
+    .badge-sent {
+      background: #064e3b;
+      color: #6ee7b7;
+    }
+    .email-item-subject {
+      font-size: 13px;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .email-item-snippet {
+      font-size: 12px;
+      color: #64748b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Right: Email Detail & AI Reply */
+    .detail-view {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #0b0f19;
+      overflow-y: auto;
+    }
+    .empty-state {
+      margin: auto;
+      text-align: center;
+      color: #64748b;
+    }
+    .empty-state p {
+      margin-top: 8px;
+      font-size: 15px;
+    }
+
+    .detail-container {
+      padding: 28px 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      max-width: 900px;
+    }
+    .incoming-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .incoming-header {
+      border-bottom: 1px solid #334155;
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+    }
+    .incoming-subject {
+      font-size: 20px;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 8px;
+    }
+    .incoming-meta {
+      font-size: 13px;
+      color: #94a3b8;
+      display: flex;
+      gap: 16px;
+    }
+    .incoming-body {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #cbd5e1;
+      white-space: pre-wrap;
+    }
+
+    /* AI Draft Box */
+    .draft-card {
+      background: #111827;
+      border: 1px solid #4f46e5;
+      border-radius: 12px;
+      padding: 24px;
+      position: relative;
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.1);
+    }
+    .draft-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .draft-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      color: #a5b4fc;
+      font-size: 15px;
+    }
+    .reply-editor {
+      width: 100%;
+      height: 160px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #f8fafc;
+      font-family: inherit;
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 16px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .reply-editor:focus {
+      border-color: #6366f1;
+    }
+    .action-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 16px;
+    }
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+      border: none;
+    }
+    .btn-send {
+      background: #4f46e5;
+      color: #ffffff;
+    }
+    .btn-send:hover {
+      background: #4338ca;
+    }
+    .btn-send:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid #334155;
+    }
+    .btn-secondary:hover {
+      background: #334155;
+    }
+    .sent-notice {
+      color: #34d399;
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">🤖</div>
+      <div class="brand-title">
+        <h1>AI Email Agent</h1>
+        <p id="userAccount">Connected to: Loading...</p>
+      </div>
+    </div>
+    <div class="status-badge">
+      <div class="dot"></div>
+      Active Watcher Live
+    </div>
+  </header>
+
+  <!-- Body -->
+  <div class="app-body">
+    <!-- Sidebar: Emails -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h2>Inbox Stream</h2>
+        <span id="inboxCount" style="font-size: 12px; color: #64748b;">0 messages</span>
+      </div>
+      <div class="email-list" id="emailList">
+        <!-- Rendered items -->
+      </div>
+    </div>
+
+    <!-- Main Detail Area -->
+    <div class="detail-view" id="detailView">
+      <div class="empty-state">
+        <div style="font-size: 40px;">📬</div>
+        <p>Select an email from the left to review or edit the AI draft.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let emails = [];
+    let selectedUid = null;
+
+    async function loadEmails() {
+      try {
+        const res = await fetch("/api/emails");
+        const data = await res.json();
+        emails = data.emails;
+        document.getElementById("userAccount").textContent = `Connected: ${data.account}`;
+        document.getElementById("inboxCount").textContent = `${emails.length} items`;
+
+        renderEmailList();
+
+        // If nothing selected or selection expired, pick the first
+        if (!selectedUid && emails.length > 0) {
+          selectEmail(emails[0].uid);
+        } else if (selectedUid) {
+          renderDetailView();
+        }
+      } catch (err) {
+        console.error("Failed to load emails:", err);
+      }
+    }
+
+    function renderEmailList() {
+      const listEl = document.getElementById("emailList");
+      listEl.innerHTML = "";
+
+      emails.forEach(email => {
+        const item = document.createElement("div");
+        item.className = `email-item ${email.uid === selectedUid ? "active" : ""}`;
+        item.onclick = () => selectEmail(email.uid);
+
+        const badgeClass = email.status === "sent" ? "badge-sent" : "badge-drafted";
+        const badgeText = email.status === "sent" ? "Sent ✅" : "AI Draft ✍️";
+
+        item.innerHTML = `
+          <div class="email-item-from">
+            <span>${escapeHtml(email.from)}</span>
+            <span class="item-badge ${badgeClass}">${badgeText}</span>
+          </div>
+          <div class="email-item-subject">${escapeHtml(email.subject)}</div>
+          <div class="email-item-snippet">${escapeHtml(email.body.slice(0, 70))}...</div>
+        `;
+        listEl.appendChild(item);
+      });
+    }
+
+    function selectEmail(uid) {
+      selectedUid = uid;
+      renderEmailList();
+      renderDetailView();
+    }
+
+    function renderDetailView() {
+      const viewEl = document.getElementById("detailView");
+      const email = emails.find(e => e.uid === selectedUid);
+
+      if (!email) {
+        viewEl.innerHTML = `
+          <div class="empty-state">
+            <div style="font-size: 40px;">📬</div>
+            <p>Select an email from the list.</p>
+          </div>
+        `;
+        return;
+      }
+
+      viewEl.innerHTML = `
+        <div class="detail-container">
+          <!-- Incoming message card -->
+          <div class="incoming-card">
+            <div class="incoming-header">
+              <div class="incoming-subject">${escapeHtml(email.subject)}</div>
+              <div class="incoming-meta">
+                <span><strong>From:</strong> ${escapeHtml(email.from)}</span>
+                <span><strong>Date:</strong> ${email.date}</span>
+              </div>
+            </div>
+            <div class="incoming-body">${escapeHtml(email.body)}</div>
+          </div>
+
+          <!-- AI Draft Review & Edit Card -->
+          <div class="draft-card">
+            <div class="draft-header">
+              <div class="draft-title">
+                <span>🤖</span> AI Proposed Response (Edit & Send)
+              </div>
+              <button class="btn btn-secondary" onclick="regenerateDraft(${email.uid})">
+                🔄 Re-generate
+              </button>
+            </div>
+
+            <textarea id="replyText" class="reply-editor" placeholder="Write or modify your response...">${escapeHtml(email.aiDraft)}</textarea>
+
+            <div class="action-bar">
+              <div id="statusNotice">
+                ${email.status === "sent" ? '<span class="sent-notice">✅ This reply has been sent!</span>' : ''}
+              </div>
+              <button id="sendBtn" class="btn btn-send" onclick="sendReplyNow(${email.uid})" ${email.status === 'sent' ? 'disabled' : ''}>
+                🚀 Send Email
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function regenerateDraft(uid) {
+      const btn = event.target;
+      btn.disabled = true;
+      btn.textContent = "Generating...";
+      try {
+        const res = await fetch(`/api/emails/${uid}/regenerate`, { method: "POST" });
+        const data = await res.json();
+        if (data.aiDraft) {
+          document.getElementById("replyText").value = data.aiDraft;
+        }
+      } catch (e) {
+        alert("Failed to regenerate reply: " + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "🔄 Re-generate";
+      }
+    }
+
+    async function sendReplyNow(uid) {
+      const replyText = document.getElementById("replyText").value.trim();
+      const sendBtn = document.getElementById("sendBtn");
+      sendBtn.disabled = true;
+      sendBtn.textContent = "Sending...";
+
+      try {
+        const res = await fetch(`/api/emails/${uid}/send`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ editedReply: replyText })
+        });
+        const data = await res.json();
+        if (data.success) {
+          sendBtn.textContent = "Sent ✅";
+          document.getElementById("statusNotice").innerHTML = '<span class="sent-notice">✅ This reply has been sent!</span>';
+          const email = emails.find(e => e.uid === uid);
+          if (email) email.status = "sent";
+          renderEmailList();
+        } else {
+          alert("Error: " + data.error);
+          sendBtn.disabled = false;
+          sendBtn.textContent = "🚀 Send Email";
+        }
+      } catch (err) {
+        alert("Send failed: " + err.message);
+        sendBtn.disabled = false;
+        sendBtn.textContent = "🚀 Send Email";
+      }
+    }
+
+    function escapeHtml(str) {
+      return (str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Initial load + auto-refresh stream every 5s
+    loadEmails();
+    setInterval(loadEmails, 5000);
+  </script>
+</body>
+</html>
